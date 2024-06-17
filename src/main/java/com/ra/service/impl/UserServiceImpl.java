@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -140,7 +141,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<User> getUsers(int page) {
         int size = 3;
-        Pageable pageable = PageRequest.of(page, size);
+        Sort sort = Sort.by(Sort.Direction.ASC, "createdAt");
+        Pageable pageable = PageRequest.of(page, size, sort);
         return userRepository.findAll(pageable);
     }
 }

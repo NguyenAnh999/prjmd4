@@ -29,19 +29,19 @@ public class UserController {
     private UserService userService;
     @Autowired
     private CustomUserDetailService customUserDetailService;
-    @GetMapping("/public/userList")
+    @GetMapping("/userList")
     public ResponseEntity<List<User>> getUser() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
-    @PostMapping("/public/register")
+    @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody FormRegister user) {
         return ResponseEntity.ok(userService.register(user));
     }
-    @GetMapping("/public/getUser")
+    @GetMapping("/getUser")
     public ResponseEntity<User> getUser(@RequestParam Integer Id) throws DataNotFoundEx {
         return new ResponseEntity<>(userService.getUserById(Id),HttpStatus.OK);
     }
-    @PostMapping("/public/Login")
+    @PostMapping("/Login")
     public ResponseEntity<?> login(@Valid @RequestBody FormLogin user) {
         return ResponseEntity.ok(ResponseWrapper.builder()
                         .eHttpStatus(EHttpStatus.SUCCESS)
@@ -50,7 +50,7 @@ public class UserController {
                         .data(userService.login(user))
                 .build());
     }
-    @GetMapping("/admin/search/userByName")
+    @GetMapping("/admin/user/search")
     public ResponseEntity<?> getUserByName(@RequestParam String name) throws DataNotFoundEx {
         return ResponseEntity.ok(userService.getUserByName(name));
     }

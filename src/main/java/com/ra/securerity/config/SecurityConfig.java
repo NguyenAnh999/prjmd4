@@ -64,11 +64,11 @@ public class SecurityConfig {
                     new ObjectMapper().writeValue(response.getOutputStream(),map);
                 }))
                 .cors(Customizer.withDefaults())
-                .authorizeHttpRequests(req->req.requestMatchers("/api/v1/public/**").permitAll()
+                .authorizeHttpRequests(req->req
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/user/**").hasAnyRole("ADMIN","USER")
                         .requestMatchers("/api/v1/manage/**").hasAnyRole("ADMIN","MANAGER")
-                        .anyRequest().authenticated())
+                        .anyRequest().permitAll())
                 .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterAfter(jwtAuthenticationFilter,UsernamePasswordAuthenticationFilter.class);
