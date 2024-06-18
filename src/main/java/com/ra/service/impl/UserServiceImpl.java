@@ -1,10 +1,12 @@
 package com.ra.service.impl;
 
 import com.ra.exception.DataNotFoundEx;
+import com.ra.exception.MyRuntimeEx;
 import com.ra.model.dto.request.FormLogin;
 import com.ra.model.dto.request.FormRegister;
 import com.ra.model.dto.response.JWTResponse;
 import com.ra.model.entity.Role;
+import com.ra.model.entity.RoleName;
 import com.ra.model.entity.User;
 import com.ra.repository.RoleRepository;
 import com.ra.repository.UserRepository;
@@ -21,13 +23,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -44,7 +44,7 @@ public class UserServiceImpl implements UserService {
     private JWTProvider jwtProvider;
 
     @Override
-    public boolean register(FormRegister formRegister) {
+    public boolean registerOrUpdate(FormRegister formRegister, Long id) {
         //chuyen FormRegister ve User de save vao database
         User user = User.builder()
                 .username(formRegister.getUsername())
@@ -58,24 +58,26 @@ public class UserServiceImpl implements UserService {
                 .updatedAt(new Date())
                 .status(true)
                 .build();
-
+        if (id != null) {
+            user.setId(id);
+        }
         List<Role> roles = new ArrayList<>();
-        if(formRegister.getRoles()!=null && !formRegister.getRoles().isEmpty()){
+        if (formRegister.getRoles() != null && !formRegister.getRoles().isEmpty()) {
             formRegister.getRoles().forEach(role -> {
-                switch (role){
+                switch (role) {
                     case "ROLE_ADMIN":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(()-> new NoSuchElementException("Khong ton tai role admin")));
+                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role admin")));
                         break;
                     case "ROLE_USER":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(()-> new NoSuchElementException("Khong ton tai role user")));
+                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
                         break;
-                    case "ROLE_MODERATOR":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(()-> new NoSuchElementException("Khong ton tai role moderator")));
+                    case "ROLE_MANAGE":
+                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role moderator")));
                         break;
                 }
             });
-        }else{
-            roles.add(roleRepository.findRoleByRoleName("ROLE_USER").orElseThrow(()-> new NoSuchElementException("Khong ton tai role user")));
+        } else {
+            roles.add(roleRepository.findRoleByRoleName("ROLE_USER").orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
         }
         user.setRoles(roles);
         userRepository.save(user);
@@ -86,8 +88,8 @@ public class UserServiceImpl implements UserService {
     public JWTResponse login(FormLogin formLogin) {
         Authentication authentication = null;
         try {
-            authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(formLogin.getUsername(),formLogin.getPassword()));
-        }catch (AuthenticationException e){
+            authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(formLogin.getUsername(), formLogin.getPassword()));
+        } catch (AuthenticationException e) {
             log.error("Sai username hoac password");
         }
 
@@ -113,7 +115,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getUserById(Integer id) throws DataNotFoundEx {
-        return userRepository.findById(id).orElseThrow(()->new DataNotFoundEx("sai co id"));
+        return userRepository.findById(id).orElseThrow(() -> new DataNotFoundEx("sai co id"));
     }
 
     @Override
@@ -129,9 +131,9 @@ public class UserServiceImpl implements UserService {
     public User blockUser(Integer id) throws DataNotFoundEx {
         User user = getUserById(id);
         if (user.getStatus()) {
-        user.setStatus(false);
-        userRepository.save(user);}
-        else {
+            user.setStatus(false);
+            userRepository.save(user);
+        } else {
             user.setStatus(true);
             userRepository.save(user);
         }
@@ -145,4 +147,72 @@ public class UserServiceImpl implements UserService {
         Pageable pageable = PageRequest.of(page, size, sort);
         return userRepository.findAll(pageable);
     }
+
+    @Override
+    public User changePass(String oldPass, String newPass, String confirmPass) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!user.getPassword().equals(oldPass)) {
+            throw new RuntimeException("mật khẩu k chính xác");
+        } else {
+            if (newPass.equals(confirmPass)) {
+                user.setPassword(newPass);
+                return userRepository.save(user);
+            } else {
+                throw new RuntimeException("mật khẩu nhập lại không đúng");
+            }
+        }
+    }
+
+    @Override
+    public User getUserByUserName(String username) {
+        return userRepository.findUserByUsername(username).orElse(null);
+    }
+
+    @Override
+    public Boolean addRoleForUser(String role, Integer userId) {
+        Optional<User> byId = userRepository.findById(userId);
+        if (byId.isPresent()) {
+            User user = byId.get();
+            switch (role) {
+                case "ROLE_ADMIN":
+                    user.getRoles().add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role admin")));
+                    break;
+                case "ROLE_USER":
+                    user.getRoles().add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
+                    break;
+                case "ROLE_MANAGE":
+                    user.getRoles().add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role moderator")));
+                    break;
+            }
+            userRepository.save(user);
+        } else {
+            throw new MyRuntimeEx("nguoi dung k ton tai");
+        }
+        return true;
+    }
+
+    public Boolean deleteRole(Integer userId, Integer roleId) throws DataNotFoundEx {
+        Boolean check= true;
+        User user = userRepository.findById(userId).orElseThrow(() -> new DataNotFoundEx("user ko ton tai"));
+
+        if (user.getRoles().stream().noneMatch(r->r.getRoleName().equals(RoleName.ROLE_ADMIN.name()))) {
+       check  = user.getRoles().remove(roleRepository.findById(roleId).orElseThrow(() -> new DataNotFoundEx("Khong ton tai")));
+        userRepository.save(user);
+        }else {
+            throw new MyRuntimeEx("ban khong co quyen xoa");
+        }
+        return check;
+
+    }
+
+    @Override
+    public List<User> findUsersCreatedInCurrentMonth() {
+        return userRepository.findUsersCreatedInCurrentMonth();
+    }
+
+    @Override
+    public CustomUserDetail myAcc() {
+        return (CustomUserDetail) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
 }
