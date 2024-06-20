@@ -50,5 +50,4 @@ ShoppingCart shoppingCart =  shoppingCartRepository.findShoppingCartByProductAnd
         shoppingCartRepository.deleteById(shoppingCartId);
         return true;
     }
-
 }

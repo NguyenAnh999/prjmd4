@@ -13,12 +13,14 @@ import com.ra.securerity.JWT.JWTProvider;
 import com.ra.securerity.principals.CustomUserDetailService;
 import com.ra.service.UserService;
 import com.ra.service.impl.AddressService;
+import com.ra.service.impl.OrderService;
 import com.ra.service.impl.ShoppingCartService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -36,21 +38,23 @@ public class UserController {
     private CustomUserDetailService customUserDetailService;
     @Autowired
     private ShoppingCartService shoppingCartService;
+    @Autowired
+    private OrderService orderService;
 
     @GetMapping("/userList")
     public ResponseEntity<List<User>> getUser() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody FormRegister user) {
-        return ResponseEntity.ok(userService.registerOrUpdate(user,null));
+    public ResponseEntity<?> register(@Valid @ModelAttribute FormRegister user) throws DataNotFoundEx {
+        return ResponseEntity.ok(userService.registerOrUpdate(user,false));
     }
     @GetMapping("/getUser")
     public ResponseEntity<User> getUser(@RequestParam Integer Id) throws DataNotFoundEx {
         return new ResponseEntity<>(userService.getUserById(Id),HttpStatus.OK);
     }
     @PostMapping("/Login")
-    public ResponseEntity<?> login(@Valid @RequestBody FormLogin user) {
+    public ResponseEntity<?> login(@Valid @RequestBody FormLogin user) throws Exception {
         return ResponseEntity.ok(ResponseWrapper.builder()
                         .eHttpStatus(EHttpStatus.SUCCESS)
                         .statusCode(200)
@@ -104,8 +108,8 @@ public class UserController {
        return ResponseEntity.ok(userService.changePass(oldPassword,newPassword,confirmPass));
     }
     @PutMapping("/user/account/update")
-    public ResponseEntity<?> updateUser(@RequestParam Long id,@RequestBody FormRegister formRegister) {
-       return ResponseEntity.ok(userService.registerOrUpdate(formRegister,id));
+    public ResponseEntity<?> updateUser(@ModelAttribute FormRegister formRegister) throws DataNotFoundEx {
+       return ResponseEntity.ok(userService.registerOrUpdate(formRegister,true));
     }
     @GetMapping("user/myAccount")
     public ResponseEntity<?> getMyAccount() {
@@ -123,5 +127,8 @@ public class UserController {
     public ResponseEntity<?> deleteOneItem(@RequestParam Long id) throws DataNotFoundEx {
         return ResponseEntity.ok(shoppingCartService.deleteShoppingCartById(id));
     }
-
+    @GetMapping("user/history/oder")
+    public ResponseEntity<?> getHistoryOder() throws DataNotFoundEx {
+        return  ResponseEntity.ok(orderService.HistoryOder());
+    }
 }

@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -33,7 +34,7 @@ public class FormRegister {
     @Size(max = 255)
     private String password;
 
-    private String avatar;
+    private MultipartFile avatar;
 
     @Pattern(regexp = "^[0-9]{10,15}$",message = "sai định dạng sdt")
     private String phone;

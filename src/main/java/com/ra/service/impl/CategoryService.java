@@ -1,6 +1,7 @@
 package com.ra.service.impl;
 
 import com.ra.exception.DataNotFoundEx;
+import com.ra.exception.MyRuntimeEx;
 import com.ra.model.dto.response.CategorySale;
 import com.ra.model.entity.Category;
 import com.ra.model.entity.Product;
@@ -43,7 +44,11 @@ public class CategoryService {
 
     public Boolean deleteCategory(Long id) throws DataNotFoundEx {
         Category category = categoryRepository.findById(id).orElseThrow(() -> new DataNotFoundEx("Category không tồn tại"));
-        categoryRepository.delete(category);
+        try {
+            categoryRepository.delete(category);
+        }catch (Exception e) {
+            throw new MyRuntimeEx("ko the xoa danh muc co san pham");
+        }
         return true;
     }
     public List<Category> getCategoryList() {

@@ -17,4 +17,5 @@ public interface UserRepository extends JpaRepository<User,Integer> {
     @Query("SELECT u FROM User u WHERE FUNCTION('MONTH', u.createdAt) = FUNCTION('MONTH', CURRENT_DATE) AND FUNCTION('YEAR', u.createdAt) = FUNCTION('YEAR', CURRENT_DATE)")
     List<User> findUsersCreatedInCurrentMonth();
 
+
 }

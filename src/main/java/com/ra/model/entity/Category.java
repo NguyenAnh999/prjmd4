@@ -27,7 +27,7 @@ public class Category {
 
     private Boolean status;
 
-    @OneToMany( mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
+    @OneToMany( mappedBy = "category", orphanRemoval = true,fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Product> products;
 }

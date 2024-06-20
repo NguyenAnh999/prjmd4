@@ -3,22 +3,18 @@ package com.ra.service.impl;
 import com.ra.exception.DataNotFoundEx;
 import com.ra.exception.MyRuntimeEx;
 import com.ra.model.dto.request.OrderRequest;
+import com.ra.model.dto.response.OrderResponse;
 import com.ra.model.entity.*;
-import com.ra.repository.AddressRepository;
-import com.ra.repository.OrderDetailRepository;
-import com.ra.repository.OrderRepository;
-import com.ra.repository.ShoppingCartRepository;
+import com.ra.repository.*;
 import com.ra.securerity.principals.CustomUserDetail;
 import com.ra.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class OrderService {
@@ -34,12 +30,15 @@ public class OrderService {
     ProductService productService;
     @Autowired
     UserService userService;
+    @Autowired
+    ProductRepository productRepository;
 
     public Boolean changeStatusOder(Long orderId, String statusString) throws DataNotFoundEx {
         try {
             Order order = orderRepository.findById(orderId).orElseThrow(() -> new DataNotFoundEx("Order not found"));
             Order.OrderStatus status = Order.OrderStatus.valueOf(statusString);
             order.setStatus(status);
+            orderRepository.save(order);
             return true;
         } catch (Exception e) {
             throw new DataNotFoundEx("trạng thái không tồn tại");
@@ -125,6 +124,13 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElseThrow(()->new DataNotFoundEx("don hang khong ton tai"));
         if (order.getStatus().equals(Order.OrderStatus.WAITING)) {
             order.setStatus(Order.OrderStatus.CANCEL);
+          List<OrderDetail> orderDetails =  orderDetailRepository.findAllByOrder(order);
+            for (OrderDetail orderDetail : orderDetails) {
+                Product productOder = orderDetail.getProduct();
+                Product product = productService.findById(productOder.getProductId());
+                product.setStockQuantity(product.getStockQuantity() + orderDetail.getOrderQuantity());
+                productRepository.save(product);
+            }
             orderRepository.save(order);
             return true;
         }else {
@@ -136,7 +142,7 @@ public class OrderService {
         User user = userService.getUserByUserName(userDetails.getUsername());
         return OrdersByStatusOder(statusString).stream().filter(order -> order.getUser().equals(user)).toList();
     }
-    public OrderRequest orderRequestForUser(String serialNumber) throws DataNotFoundEx {
+    public OrderRequest orderRequestForUser(String serialNumber) {
         Order order = orderRepository.findBySerialNumber(serialNumber);
         return OrderRequest.builder()
                 .order(order)
@@ -149,11 +155,18 @@ public class OrderService {
     public Long oderQuantity(Date startDate, Date dateEnd) {
         return orderRepository.countOrderByForTime(startDate,dateEnd);
     }
-
     public List<Order> orderByForTime(Date startDate, Date endDate) {
         return orderRepository.findOrderByForTime(startDate,endDate);
     }
-
-
+    public OrderResponse orderQuantityByForTime(Date startDate,Date endDate) {
+        List<Order> orders = orderByForTime(startDate,endDate);
+        return OrderResponse.builder()
+                .orders(orders)
+                .quantity(oderQuantity(startDate,endDate))
+                .build();
+    }
+    public List<Order> findAll(){
+        return orderRepository.findAll();
+    }
 }
 

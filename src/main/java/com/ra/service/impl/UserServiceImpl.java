@@ -1,10 +1,12 @@
 package com.ra.service.impl;
 
+import com.ra.constaint.EHttpStatus;
 import com.ra.exception.DataNotFoundEx;
 import com.ra.exception.MyRuntimeEx;
 import com.ra.model.dto.request.FormLogin;
 import com.ra.model.dto.request.FormRegister;
 import com.ra.model.dto.response.JWTResponse;
+import com.ra.model.dto.response.ResponseWrapper;
 import com.ra.model.entity.Role;
 import com.ra.model.entity.RoleName;
 import com.ra.model.entity.User;
@@ -26,6 +28,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -42,44 +45,64 @@ public class UserServiceImpl implements UserService {
     private AuthenticationManager authenticationManager;
     @Autowired
     private JWTProvider jwtProvider;
-
+    @Autowired
+    private FileService fileService;
     @Override
-    public boolean registerOrUpdate(FormRegister formRegister, Long id) {
-        //chuyen FormRegister ve User de save vao database
-        User user = User.builder()
-                .username(formRegister.getUsername())
-                .password(passwordEncoder.encode(formRegister.getPassword()))
-                .fullName(formRegister.getFullName())
-                .address(formRegister.getAddress())
-                .email(formRegister.getEmail())
-                .phone(formRegister.getPhone())
-                .createdAt(new Date())
-                .isDeleted(true)
-                .updatedAt(new Date())
-                .status(true)
-                .build();
-        if (id != null) {
-            user.setId(id);
+    public boolean registerOrUpdate(FormRegister formRegister, Boolean isUpdate) {
+        User user ;
+        if (isUpdate) {
+            CustomUserDetail userDetails = (CustomUserDetail) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+             user = getUserByUserName(userDetails.getUsername());
+           if (formRegister.getAvatar()!=null){
+               user.setAvatar(fileService.uploadFileToServer(formRegister.getAvatar()));
+           }
+           if (formRegister.getEmail()!=null){
+               user.setEmail(formRegister.getEmail());
+           }
+           if (formRegister.getAddress()!=null){
+               user.setAddress(formRegister.getAddress());
+           }
+           if (formRegister.getPhone()!=null){
+               user.setPhone(formRegister.getPhone());
+           }
+           if (formRegister.getFullName()!=null){
+               user.setFullName(formRegister.getFullName());
+           }
+
+        }else {
+             user = User.builder()
+                    .username(formRegister.getUsername())
+                    .password(passwordEncoder.encode(formRegister.getPassword()))
+                    .fullName(formRegister.getFullName())
+                    .address(formRegister.getAddress())
+                    .email(formRegister.getEmail())
+                    .phone(formRegister.getPhone())
+                    .createdAt(new Date())
+                     .isDeleted(true)
+                     .status(true)
+                     .avatar(fileService.uploadFileToServer(formRegister.getAvatar()))
+                    .build();
+            List<Role> roles = new ArrayList<>();
+            if (formRegister.getRoles() != null && !formRegister.getRoles().isEmpty()) {
+                formRegister.getRoles().forEach(role -> {
+                    switch (role) {
+                        case "ROLE_ADMIN":
+                            roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role admin")));
+                            break;
+                        case "ROLE_USER":
+                            roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
+                            break;
+                        case "ROLE_MANAGE":
+                            roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role moderator")));
+                            break;
+                    }
+                });
+            } else {
+                roles.add(roleRepository.findRoleByRoleName("ROLE_USER").orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
+            }
+            user.setRoles(roles);
+           user.setUpdatedAt(new Date());
         }
-        List<Role> roles = new ArrayList<>();
-        if (formRegister.getRoles() != null && !formRegister.getRoles().isEmpty()) {
-            formRegister.getRoles().forEach(role -> {
-                switch (role) {
-                    case "ROLE_ADMIN":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role admin")));
-                        break;
-                    case "ROLE_USER":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
-                        break;
-                    case "ROLE_MANAGE":
-                        roles.add(roleRepository.findRoleByRoleName(role).orElseThrow(() -> new NoSuchElementException("Khong ton tai role moderator")));
-                        break;
-                }
-            });
-        } else {
-            roles.add(roleRepository.findRoleByRoleName("ROLE_USER").orElseThrow(() -> new NoSuchElementException("Khong ton tai role user")));
-        }
-        user.setRoles(roles);
         userRepository.save(user);
         return true;
     }
@@ -91,6 +114,7 @@ public class UserServiceImpl implements UserService {
             authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(formLogin.getUsername(), formLogin.getPassword()));
         } catch (AuthenticationException e) {
             log.error("Sai username hoac password");
+            throw new MyRuntimeEx("tài khoản không dúng hoặc đã bị khóa");
         }
 
         CustomUserDetail userDetail = (CustomUserDetail) authentication.getPrincipal();
@@ -130,6 +154,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public User blockUser(Integer id) throws DataNotFoundEx {
         User user = getUserById(id);
+        if (user.getRoles().equals(RoleName.ROLE_ADMIN)){
+            throw new MyRuntimeEx("khong the khoa admin khac");
+        }
         if (user.getStatus()) {
             user.setStatus(false);
             userRepository.save(user);
@@ -150,7 +177,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User changePass(String oldPass, String newPass, String confirmPass) {
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        CustomUserDetail userDetails = (CustomUserDetail) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User user = getUserByUserName(userDetails.getUsername());
         if (!user.getPassword().equals(oldPass)) {
             throw new RuntimeException("mật khẩu k chính xác");
         } else {

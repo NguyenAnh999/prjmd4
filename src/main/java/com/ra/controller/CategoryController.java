@@ -20,7 +20,7 @@ public class CategoryController {
     public ResponseEntity<?> updateCatalog(@Valid @RequestBody Category category, @RequestParam Long id  ) throws DataNotFoundEx {
         return ResponseEntity.ok(categoryService.saveCatalog(category,id));
     }
-    @PutMapping("/admin/addNewCatalog")
+    @PostMapping("/admin/addNewCatalog")
     public ResponseEntity<?> addNewCatalog(@Valid @RequestBody Category category) throws DataNotFoundEx {
         return ResponseEntity.ok(categoryService.saveCatalog(category,null));
     }

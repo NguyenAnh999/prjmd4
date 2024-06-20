@@ -8,14 +8,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
+
 @RestController
+@RequestMapping("/api/v1")
 public class OrderController {
     @Autowired
     private OrderService orderService;
     @Autowired
     private ShoppingCartService shoppingCartService;
 
-    @PutMapping("history/cancel")
+    @PutMapping("/user/history/cancel")
     public ResponseEntity<?> cancelOrder(@RequestParam Long id) throws DataNotFoundEx {
       return ResponseEntity.ok(orderService.CanselOrder(id));
     }
@@ -24,20 +27,20 @@ public class OrderController {
         return ResponseEntity.ok(orderService.OrdersByStatusOder(status));
     }
     @GetMapping("/user/history/order")
-    public ResponseEntity<?> getOrders() throws DataNotFoundEx {
+    public ResponseEntity<?> getOrders() {
         return ResponseEntity.ok(orderService.orders());
 
     }
-    @GetMapping("user/history/serialNumber")
+    @GetMapping("/user/history/serialNumber")
     public ResponseEntity<?> getSerialNumber(String serialNumber) throws DataNotFoundEx {
         return ResponseEntity.ok(orderService.orderRequestForUser(serialNumber));
     }
-    @PutMapping("user/cart/items/quantity/change")
+    @PutMapping("/user/cart/items/quantity/change")
     public ResponseEntity<?> addItem(@RequestParam Long productId, @RequestParam Integer quantity) throws DataNotFoundEx {
         return ResponseEntity.ok(shoppingCartService.addToCart(productId, quantity));
     }
 
-    @PutMapping("admin/orders/status/change")
+    @PutMapping("/admin/orders/status/change")
     public ResponseEntity<?> changeStatus(@RequestParam String status,@RequestParam Long oderID) throws DataNotFoundEx {
         return ResponseEntity.ok(orderService.changeStatusOder(oderID,status));
     }
@@ -50,6 +53,12 @@ public class OrderController {
     public ResponseEntity<?> getOrderDetail(@RequestParam Long orderID) throws DataNotFoundEx {
         return ResponseEntity.ok(orderService.orderRequest(orderID));
     }
-
-
+    @GetMapping("/admin/order/by/time")
+    public ResponseEntity<?> getOrdersByTime(@RequestParam Date starDate,@RequestParam Date endDate) {
+        return ResponseEntity.ok(orderService.orderQuantityByForTime(starDate,endDate));
+    }
+    @GetMapping("/admin/all/order")
+    public ResponseEntity<?> getAllOrders() {
+        return ResponseEntity.ok(orderService.orders());
+    }
 }

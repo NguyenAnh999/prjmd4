@@ -62,7 +62,7 @@ public class ProductService {
     }
 
         public List<Product> findByProductNameOrDescription(String name,String description) throws DataNotFoundEx {
-        List<Product> products= productRepository.findProductByProductNameOrDescription(name, description);
+        List<Product> products= productRepository.findProductByProductNameContainingOrDescriptionContaining(name, description);
         if (products.isEmpty()){
             throw new DataNotFoundEx("ko có san phẩm bạn muốn tìm");
         }else {
@@ -78,6 +78,7 @@ public class ProductService {
                 .image(productRequest.getImage())
                 .category(categoryRepository.findById(productRequest.getCategoryID()).orElseThrow(() -> new DataNotFoundEx("category khong ton tai")))
                 .unitPrice(productRequest.getUnitPrice())
+                .description(productRequest.getDescription())
                 .build();
 
 

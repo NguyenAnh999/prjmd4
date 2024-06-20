@@ -47,6 +47,7 @@ public class ProductController {
     public ResponseEntity<?> getListPro(@RequestParam Integer page) {
         return ResponseEntity.ok(productService.getProductList(page).getContent());
     }
+
     @DeleteMapping("/admin/deletePro")
     public ResponseEntity<?> deleteCatalogs(@RequestParam Long id) throws DataNotFoundEx {
         return ResponseEntity.ok(productService.deletePro(id));
